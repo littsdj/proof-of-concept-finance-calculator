@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Horizon — Retirement Projection</title>
+  <meta name="description" content="A front-end-only retirement calculator. Enter today's numbers and see your savings grow year by year.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2311152A'/%3E%3Cpath d='M6 24 C14 23 20 17 26 7' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"><span></span></div>
+
+  <div class="announce"><p>Check out what I had Claude build!</p></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Horizon, back to top">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25 C14 24 20 17 27 6"/></svg>
+      Horizon
+    </a>
+    <nav class="topbar-nav" aria-label="Sections">
+      <a href="#inputs">Your numbers</a>
+      <a href="#results" class="needs-results">Projection</a>
+    </nav>
+    <button class="theme-toggle" type="button" aria-label="Switch color theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO + FORM ============ -->
+    <section class="intro" id="inputs">
+      <div class="intro-copy">
+        <p class="eyebrow">Retirement projection</p>
+        <h1 class="display">What will your money <em>become?</em></h1>
+        <p class="lede">Enter today's numbers. Horizon projects your income, savings, and each account year by year, all the way to the end of your plan.</p>
+        <p class="privacy">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+          Everything is calculated in your browser. Nothing you type leaves this page.
+        </p>
+        <p class="disclaimer"><strong>For entertainment only.</strong> This app should not be used as investment or retirement advice.</p>
+        <svg class="hero-curve" viewBox="0 0 600 260" preserveAspectRatio="none" aria-hidden="true">
+          <path class="hero-curve-fill" d="M0 250 C200 246 330 225 430 170 C500 130 555 70 600 10 L600 260 L0 260 Z"/>
+          <path class="hero-curve-line" d="M0 250 C200 246 330 225 430 170 C500 130 555 70 600 10"/>
+        </svg>
+      </div>
+
+      <form class="plan-form" id="plan-form" novalidate>
+        <fieldset class="card">
+          <legend><span class="legend-title">You</span><span class="legend-hint">Ages set the length of the projection</span></legend>
+          <div class="grid-3">
+            <label class="field"><span>Current age</span><div class="input"><input name="age" type="number" inputmode="numeric" min="16" max="90" step="1" required></div></label>
+            <label class="field"><span>Retire at</span><div class="input"><input name="retireAge" type="number" inputmode="numeric" min="18" max="100" step="1" required></div></label>
+            <label class="field"><span>Plan to age</span><div class="input"><input name="planAge" type="number" inputmode="numeric" min="30" max="115" step="1" required></div></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend><span class="legend-title">Income &amp; saving</span><span class="legend-hint">Savings rate is a share of gross income</span></legend>
+          <div class="grid-3">
+            <label class="field"><span>Annual income</span><div class="input"><i>$</i><input name="income" type="text" inputmode="decimal" data-money required></div></label>
+            <label class="field"><span>Income growth</span><div class="input"><input name="incomeGrowth" type="number" inputmode="decimal" step="0.1" min="-10" max="30" required><i>%/yr</i></div></label>
+            <label class="field"><span>Savings rate</span><div class="input"><input name="savingsRate" type="number" inputmode="decimal" step="0.5" min="0" max="100" required><i>%</i></div></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend><span class="legend-title">What you have today</span><span class="legend-hint">Anything outside these accounts counts as other assets</span></legend>
+          <div class="grid-2">
+            <label class="field field-wide"><span>Total net worth</span><div class="input"><i>$</i><input name="netWorth" type="text" inputmode="decimal" data-money required></div></label>
+          </div>
+          <div class="accounts">
+            <div class="account" data-account="roth">
+              <label class="field"><span><b class="swatch"></b>Roth</span><div class="input"><i>$</i><input name="roth" type="text" inputmode="decimal" data-money required></div></label>
+              <label class="field field-split"><span>Share of new savings</span><div class="input"><input name="splitRoth" type="number" inputmode="decimal" min="0" max="100" step="1" required><i>%</i></div></label>
+            </div>
+            <div class="account" data-account="trad">
+              <label class="field"><span><b class="swatch"></b>Traditional (401k / IRA)</span><div class="input"><i>$</i><input name="trad" type="text" inputmode="decimal" data-money required></div></label>
+              <label class="field field-split"><span>Share of new savings</span><div class="input"><input name="splitTrad" type="number" inputmode="decimal" min="0" max="100" step="1" required><i>%</i></div></label>
+            </div>
+            <div class="account" data-account="taxable">
+              <label class="field"><span><b class="swatch"></b>Taxable brokerage</span><div class="input"><i>$</i><input name="taxable" type="text" inputmode="decimal" data-money required></div></label>
+              <label class="field field-split"><span>Share of new savings</span><div class="input"><input name="splitTaxable" type="number" inputmode="decimal" min="0" max="100" step="1" required><i>%</i></div></label>
+            </div>
+          </div>
+          <div class="split-meter" aria-live="polite">
+            <div class="split-bar"><span data-k="roth"></span><span data-k="trad"></span><span data-k="taxable"></span></div>
+            <p class="split-note"></p>
+          </div>
+          <p class="derived"><span>Other assets (home equity, cash, etc.)</span><strong class="mono" id="other-assets">—</strong></p>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend><span class="legend-title">Big expenses</span><span class="legend-hint">One-time costs in today's dollars, paid from taxable savings first</span></legend>
+          <div class="expenses" id="expenses"></div>
+          <button type="button" class="btn-ghost" id="add-expense">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Add an expense
+          </button>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend><span class="legend-title">Assumptions</span><span class="legend-hint">Averages, not predictions. Adjust to test other futures</span></legend>
+          <div class="grid-3">
+            <label class="field"><span>Return while working</span><div class="input"><input name="returnPre" type="number" inputmode="decimal" step="0.1" min="-10" max="20" required><i>%/yr</i></div></label>
+            <label class="field"><span>Return in retirement</span><div class="input"><input name="returnPost" type="number" inputmode="decimal" step="0.1" min="-10" max="20" required><i>%/yr</i></div></label>
+            <label class="field"><span>Inflation</span><div class="input"><input name="inflation" type="number" inputmode="decimal" step="0.1" min="0" max="15" required><i>%/yr</i></div></label>
+            <label class="field"><span>Retirement spending</span><div class="input"><i>$</i><input name="spending" type="text" inputmode="decimal" data-money required><i>/yr</i></div><small>In today's dollars</small></label>
+            <label class="field"><span>Tax on traditional withdrawals</span><div class="input"><input name="taxRate" type="number" inputmode="decimal" step="1" min="0" max="60" required><i>%</i></div></label>
+            <label class="field"><span>Safe withdrawal rate</span><div class="input"><input name="swr" type="number" inputmode="decimal" step="0.1" min="1" max="10" required><i>%</i></div><small>Sets your financial-independence target</small></label>
+          </div>
+        </fieldset>
+
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <div class="form-actions">
+          <button class="btn-primary" type="submit">
+            Build my projection
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+          </button>
+          <button class="btn-link" type="button" id="reset-form">Reset to example numbers</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <div id="results" hidden>
+
+      <section class="verdict reveal" aria-labelledby="verdict-title">
+        <p class="eyebrow" id="verdict-eyebrow"></p>
+        <h2 class="display verdict-line" id="verdict-title"></h2>
+        <div class="verdict-facts" id="verdict-facts"></div>
+        <div class="units" role="group" aria-label="Show amounts in">
+          <span class="units-label">Show amounts in</span>
+          <div class="segmented">
+            <button type="button" data-units="real" aria-pressed="true">Today's dollars</button>
+            <button type="button" data-units="nominal" aria-pressed="false">Future dollars</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Signature: scroll-scrubbed lifetime chart -->
+      <section class="journey" id="journey" aria-labelledby="journey-title">
+        <div class="journey-sticky">
+          <div class="journey-head">
+            <div>
+              <p class="eyebrow">Your net worth, year by year</p>
+              <h2 class="section-title" id="journey-title">Scroll to move through time</h2>
+            </div>
+            <div class="journey-readout" aria-live="off">
+              <span class="journey-age-label">Age</span>
+              <span class="journey-age" id="journey-age">32</span>
+              <span class="journey-total mono" id="journey-total">$0</span>
+            </div>
+          </div>
+          <div class="journey-chart" id="journey-chart"></div>
+          <div class="legend" id="journey-legend"></div>
+          <div class="journey-caption" id="journey-caption" aria-live="polite"></div>
+        </div>
+        <div class="journey-track" id="journey-track" aria-hidden="true"></div>
+      </section>
+
+      <section class="panel reveal" aria-labelledby="engine-title">
+        <div class="panel-head">
+          <p class="eyebrow">Where growth comes from</p>
+          <h2 class="section-title" id="engine-title"></h2>
+          <p class="panel-sub" id="engine-sub"></p>
+        </div>
+        <div class="chart" id="engine-chart"></div>
+        <div class="legend" id="engine-legend"></div>
+      </section>
+
+      <div class="panel-row">
+        <section class="panel reveal" aria-labelledby="income-title">
+          <div class="panel-head">
+            <p class="eyebrow">Working years</p>
+            <h2 class="section-title" id="income-title">Income and what you keep</h2>
+            <p class="panel-sub" id="income-sub"></p>
+          </div>
+          <div class="chart chart-short" id="income-chart"></div>
+          <div class="legend" id="income-legend"></div>
+        </section>
+
+        <section class="panel reveal" aria-labelledby="mix-title">
+          <div class="panel-head">
+            <p class="eyebrow">At retirement</p>
+            <h2 class="section-title" id="mix-title">How your savings are taxed</h2>
+            <p class="panel-sub">The mix decides how much of each withdrawal you keep.</p>
+          </div>
+          <div class="mix" id="mix"></div>
+        </section>
+      </div>
+
+      <section class="panel reveal" aria-labelledby="draw-title">
+        <div class="panel-head">
+          <p class="eyebrow">Retirement years</p>
+          <h2 class="section-title" id="draw-title"></h2>
+          <p class="panel-sub" id="draw-sub"></p>
+        </div>
+        <div class="chart" id="draw-chart"></div>
+        <div class="legend" id="draw-legend"></div>
+      </section>
+
+      <section class="milestones reveal" aria-labelledby="ms-title">
+        <div class="panel-head">
+          <p class="eyebrow">In order</p>
+          <h2 class="section-title" id="ms-title">Milestones along the way</h2>
+        </div>
+        <ol class="timeline" id="timeline"></ol>
+      </section>
+
+      <section class="panel reveal table-panel" aria-labelledby="table-title">
+        <details>
+          <summary>
+            <span class="section-title" id="table-title">Year-by-year table</span>
+            <span class="panel-sub">Every number behind the charts</span>
+          </summary>
+          <div class="table-wrap"><table class="data-table" id="data-table"></table></div>
+        </details>
+      </section>
+
+      <footer class="fineprint">
+        <p class="disclaimer"><strong>For entertainment only.</strong> This application is for entertainment value only and should not be used as investment or retirement advice.</p>
+        <p>Horizon is a simplified model for exploring ideas. It assumes steady returns every year, ignores contribution limits, early-withdrawal penalties, Social Security, and capital-gains tax, and taxes traditional withdrawals at one flat rate. Real markets are bumpier.</p>
+        <button class="btn-link" type="button" id="edit-numbers">Edit your numbers</button>
+      </footer>
+    </div>
+  </main>
+
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+</body>
+</html>
